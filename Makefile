@@ -3,6 +3,9 @@
 # Note: If you see "make: function definition file not found", this is due to a shell
 # function overriding the make command. Use ./make.sh as a workaround.
 
+# Folders to lint and type-check
+SRC_FOLDERS = src/ tests/
+
 # Default target
 all: lint type-check
 
@@ -65,23 +68,23 @@ install-deps:
 
 lint:
 	@echo "Running Ruff linter..."
-	uv run ruff check src/ examples/
+	uv run ruff check $(SRC_FOLDERS)
 
 format:
 	@echo "Formatting code with Ruff..."
-	uv run ruff format src/ examples/ tests/
-	uv run ruff check src/ examples/ tests/ --fix
+	uv run ruff format $(SRC_FOLDERS)
+	uv run ruff check $(SRC_FOLDERS) --fix
 
 format-check:
 	@echo "Checking code formatting..."
-	uv run ruff format src/ examples/ tests/ --check
+	uv run ruff format $(SRC_FOLDERS) --check
 
 fix:
 	@echo "🔧 Auto-fixing code issues..."
 	@echo "Running Ruff formatter..."
-	uv run ruff format src/ examples/ tests/
+	uv run ruff format $(SRC_FOLDERS)
 	@echo "Running Ruff linter with safe fixes..."
-	uv run ruff check src/ examples/ tests/ --fix
+	uv run ruff check $(SRC_FOLDERS) --fix
 	@echo "✅ Safe fixes applied!"
 	@echo ""
 	@echo "Note: Some issues may require manual fixes:"
@@ -92,7 +95,7 @@ fix:
 
 type-check:
 	@echo "Running Pyright type checker..."
-	uv run pyright src/ examples/
+	uv run pyright $(SRC_FOLDERS)
 
 test:
 	@echo "Running tests..."
