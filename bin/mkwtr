@@ -205,8 +205,20 @@ main() {
     local ticket_slug
     ticket_slug=$(get_ticket_slug "$ticket_id")
     
+    # Get project name from Linear
+    print_info "Fetching project name for $ticket_id..."
+    local project_name
+    project_name=$(linear issue "$ticket_id" | grep -i "project:" | sed 's/│//g' | sed 's/.*Project:[[:space:]]*//' | sed 's/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')
+    
+    if [ -z "$project_name" ]; then
+        print_warning "Could not fetch project name from Linear, using repository name as fallback"
+        project_name=$(basename "$git_root")
+    fi
+    
+    print_info "Using project name: $project_name"
+    
     # Define worktree path
-    local worktree_path="${git_root}/../scrapinator-${ticket_slug}"
+    local worktree_path="${git_root}/../${project_name}-${ticket_slug}"
     
     # Check if worktree already exists
     if [ -d "$worktree_path" ]; then
