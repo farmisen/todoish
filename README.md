@@ -1,9 +1,3 @@
-Excellent point. A good README should reflect the project's current state and purpose accurately. The name change also gives it more personality.
-
-Here is a revised `README.md` for **todoish**, tailored to be more descriptive of what the project *is*—a learning tool—rather than just a user manual.
-
----
-
 # todoish
 
 ![Python](https://img.shields.io/badge/python-3.12+-blue.svg)
