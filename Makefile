@@ -1,4 +1,4 @@
-.PHONY: help install lint format format-check type-check test clean all dev-check fix
+.PHONY: help setup install-deps lint format format-check type-check test clean all dev-check fix
 
 # Note: If you see "make: function definition file not found", this is due to a shell
 # function overriding the make command. Use ./make.sh as a workaround.
@@ -8,7 +8,8 @@ all: lint type-check
 
 help:
 	@echo "Available commands:"
-	@echo "  make install      - Install project with dev dependencies"
+	@echo "  make setup        - Install uv and create Python 3.12 virtual environment"
+	@echo "  make install-deps - Install project with dev dependencies"
 	@echo "  make lint         - Run Ruff linter"
 	@echo "  make format       - Format code with Ruff (includes tests)"
 	@echo "  make format-check - Check code formatting"
@@ -19,7 +20,47 @@ help:
 	@echo "  make all          - Run lint and type-check"
 	@echo "  make dev-check    - Run all checks (format-check, lint, type-check)"
 
-install:
+setup:
+	@echo "🔧 Setting up todoish development environment..."
+	@# Check for Python 3.12
+	@echo "🐍 Checking for Python 3.12..."
+	@if ! python3.12 --version >/dev/null 2>&1; then \
+		echo "❌ Error: Python 3.12 is not installed or not in PATH"; \
+		echo ""; \
+		echo "Please install Python 3.12 from:"; \
+		echo "  - https://www.python.org/downloads/"; \
+		echo "  - Or use your system package manager"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@echo "✅ Python 3.12 found: $$(python3.12 --version)"
+	@# Check if uv is installed
+	@if ! command -v uv >/dev/null 2>&1; then \
+		echo "📦 Installing uv..."; \
+		curl -LsSf https://astral.sh/uv/install.sh | sh; \
+		echo "✅ uv installed successfully!"; \
+		echo ""; \
+		echo "⚠️  Please restart your shell or run:"; \
+		echo "    source ~/.cargo/env"; \
+		echo ""; \
+		echo "Then run 'make setup' again."; \
+		exit 1; \
+	fi
+	@echo "✅ uv is installed"
+	@# Create virtual environment with Python 3.12
+	@echo "🐍 Creating Python 3.12 virtual environment..."
+	@uv venv --python 3.12
+	@echo "✅ Virtual environment created"
+	@echo ""
+	@echo "📝 Next steps:"
+	@echo "1. Activate the virtual environment:"
+	@echo "   source .venv/bin/activate  # On Unix/macOS"
+	@echo "   .venv\\Scripts\\activate     # On Windows"
+	@echo ""
+	@echo "2. Install the project dependencies:"
+	@echo "   ./make.sh install-deps"
+
+install-deps:
 	uv pip install -e ".[dev]"
 
 lint:

@@ -51,16 +51,33 @@ todoish/
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/farmisern/todoish.git
+   git clone https://github.com/farmisen/todoish.git
    cd todoish
    ```
 
-2. Install the project with development dependencies:
+2. Set up the development environment:
    ```sh
-   ./make.sh install
+   ./make.sh setup
+   ```
+   This will:
+   - Install `uv` if not already installed
+   - Create a Python 3.12 virtual environment
+
+3. Activate the virtual environment:
+   ```sh
+   # On Unix/macOS:
+   source .venv/bin/activate
+   
+   # On Windows:
+   .venv\Scripts\activate
    ```
 
-3. Run the application:
+4. Install the project with development dependencies:
+   ```sh
+   ./make.sh install-deps
+   ```
+
+5. Run the application:
    ```sh
    python main.py
    ```
@@ -72,8 +89,11 @@ This project includes a comprehensive set of development tools accessible throug
 ### Available Commands
 
 ```bash
+# Setup
+./make.sh setup        # Install uv and create Python 3.12 virtual environment
+
 # Install project with dev dependencies
-./make.sh install
+./make.sh install-deps
 
 # Code quality checks
 ./make.sh lint         # Run Ruff linter
