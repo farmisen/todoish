@@ -5,11 +5,12 @@ set -euo pipefail
 # Usage: ./mkwtr <ticket-id>
 
 # If we're not already running from temp, copy ourselves to temp and re-exec
-if [[ "$0" != /tmp/* ]]; then
-    cp "$0" /tmp/mkwtr-$$
-    chmod +x /tmp/mkwtr-$$
-    exec /tmp/mkwtr-$$ "$@"
-fi
+# COMMENTED OUT: This causes issues with finding the gbn script
+# if [[ "$0" != /tmp/* ]]; then
+#     cp "$0" /tmp/mkwtr-$$
+#     chmod +x /tmp/mkwtr-$$
+#     exec /tmp/mkwtr-$$ "$@"
+# fi
 
 # Colors for output
 RED='\033[0;31m'
