@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Script to create a git worktree for a Linear ticket
+# Usage: ./mkwtr <ticket-id>
+
+# If we're not already running from temp, copy ourselves to temp and re-exec
+if [[ "$0" != /tmp/* ]]; then
+    cp "$0" /tmp/mkwtr-$$
+    chmod +x /tmp/mkwtr-$$
+    exec /tmp/mkwtr-$$ "$@"
+fi
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Functions
+print_error() {
+    echo -e "${RED}Error: $1${NC}" >&2
+}
+
+print_success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+print_info() {
+    echo -e "${YELLOW}→ $1${NC}"
+}
+
+validate_ticket_id() {
+    local ticket_id="$1"
+    if [[ ! "$ticket_id" =~ ^ROY-[0-9]+$ ]]; then
+        print_error "Invalid ticket ID format. Expected format: ROY-123"
+        return 1
+    fi
+    return 0
+}
+
+get_ticket_slug() {
+    local ticket_id="$1"
+    echo "${ticket_id,,}" # Convert to lowercase
+}
+
+get_git_root() {
+    git rev-parse --show-toplevel 2>/dev/null || {
+        print_error "Not in a git repository"
+        exit 1
+    }
+}
+
+get_claude_path() {
+    # Use CLAUDE_HOME env var, defaulting to ~/.claude/local
+    local claude_home="${CLAUDE_HOME:-$HOME/.claude/local}"
+    local claude_path="$claude_home/claude"
+
+    # Check if claude executable exists at CLAUDE_HOME location
+    if [ -f "$claude_path" ] && [ -x "$claude_path" ]; then
+        echo "$claude_path"
+        return 0
+    fi
+
+    # Fallback to checking if claude is in PATH
+    if command -v claude &> /dev/null; then
+        echo "claude"
+        return 0
+    fi
+
+    # Return empty string if not found
+    echo ""
+    return 1
+}
+
+check_claude_available() {
+    local claude_path
+    claude_path=$(get_claude_path)
+
+    if [ -z "$claude_path" ]; then
+        local claude_home="${CLAUDE_HOME:-$HOME/.claude/local}"
+        print_error "Claude Code CLI not found. Please install it first."
+        print_info "Expected location: $claude_home/claude or in PATH"
+        print_info "Visit https://claude.ai/code for installation instructions"
+        return 1
+    fi
+
+    return 0
+}
+
+check_uv_available() {
+    if ! command -v uv &> /dev/null; then
+        print_error "uv not found. Please install it first."
+        print_info "Visit https://github.com/astral-sh/uv for installation instructions"
+        return 1
+    fi
+    return 0
+}
+
+setup_python_environment() {
+    local worktree_path="$1"
+
+    print_info "Setting up Python environment with uv..."
+
+    # Check if uv is available
+    if ! check_uv_available; then
+        print_error "Cannot setup Python environment without uv"
+        return 1
+    fi
+
+    # Create virtual environment explicitly in the worktree
+    print_info "Creating virtual environment in ${worktree_path}/.venv..."
+    if ! (cd "$worktree_path" && uv venv .venv); then
+        print_error "Failed to create virtual environment"
+        return 1
+    fi
+
+    # Install dependencies using the worktree's venv
+    print_info "Installing project dependencies..."
+    if ! (cd "$worktree_path" && uv pip install -e ".[dev]"); then
+        print_error "Failed to install dependencies"
+        return 1
+    fi
+
+    print_success "Python environment setup complete at ${worktree_path}/.venv"
+    return 0
+}
+
+
+setup_symlinks() {
+    local worktree_path="$1"
+    local git_root="$2"
+    local config_file="${git_root}/worktree.rc"
+    
+    # Check if configuration file exists
+    if [ ! -f "$config_file" ]; then
+        # Fallback to default symlinks if no config file
+        if [ -f "${git_root}/.envrc" ]; then
+            print_info "Creating symlink for .envrc..."
+            ln -s "${git_root}/.envrc" "${worktree_path}/.envrc"
+        fi
+        if [ -f "${git_root}/CLAUDE.md" ]; then
+            print_info "Creating symlink for CLAUDE.md..."
+            ln -s "${git_root}/CLAUDE.md" "${worktree_path}/CLAUDE.md"
+        fi
+        return 0
+    fi
+    
+    # Source the configuration file
+    source "$config_file"
+    
+    # Check if SYMLINK_FILES is defined and not empty
+    if [ -z "$SYMLINK_FILES" ] || [ -z "$(echo "$SYMLINK_FILES" | tr -d '[:space:]')" ]; then
+        print_info "No files to symlink in worktree.rc"
+        return 0
+    fi
+    
+    # Create symlinks for each file
+    echo "$SYMLINK_FILES" | while read -r file; do
+        # Skip empty lines
+        [ -z "$file" ] && continue
+        
+        if [ -f "${git_root}/${file}" ]; then
+            print_info "Creating symlink for ${file}..."
+            ln -s "${git_root}/${file}" "${worktree_path}/${file}"
+        else
+            print_info "${file} not found in main repository, skipping symlink"
+        fi
+    done
+    
+    return 0
+}
+
+# Main script
+main() {
+    # Check if ticket ID is provided
+    if [ $# -eq 0 ]; then
+        print_error "No ticket ID provided"
+        echo "Usage: $0 <ticket-id>"
+        echo "Example: $0 ROY-123"
+        exit 1
+    fi
+
+    local ticket_id="$1"
+    
+    # Validate ticket ID
+    if ! validate_ticket_id "$ticket_id"; then
+        exit 1
+    fi
+
+    print_info "Processing ticket $ticket_id"
+
+    # Check dependencies early
+    if ! check_claude_available; then
+        exit 1
+    fi
+
+    if ! check_uv_available; then
+        exit 1
+    fi
+
+    # Get git root directory
+    local git_root
+    git_root=$(get_git_root)
+    
+    # Get ticket slug
+    local ticket_slug
+    ticket_slug=$(get_ticket_slug "$ticket_id")
+    
+    # Define worktree path
+    local worktree_path="${git_root}/../scrapinator-${ticket_slug}"
+    
+    # Check if worktree already exists
+    if [ -d "$worktree_path" ]; then
+        print_error "Worktree already exists at $worktree_path"
+        read -p "Do you want to navigate to the existing worktree? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            cd "$worktree_path"
+            print_success "Navigated to existing worktree"
+            exec "$SHELL"
+        fi
+        exit 1
+    fi
+
+    # Ensure we're on main branch
+    local current_branch
+    current_branch=$(git branch --show-current)
+    if [ "$current_branch" != "main" ]; then
+        print_info "Switching to main branch..."
+        git checkout main
+    fi
+
+    # Pull latest changes
+    print_info "Pulling latest changes from main..."
+    git pull origin main
+
+    # Get branch name from Linear
+    print_info "Fetching branch name from Linear for $ticket_id..."
+    local branch_name
+    local claude_cmd
+    claude_cmd=$(get_claude_path)
+
+    print_info "Using claude command: $claude_cmd"
+
+    if check_claude_available; then
+        print_info "Fetching branch name from Linear..."
+        branch_name=$($claude_cmd --print "Fetch the git branch name for Linear ticket $ticket_id using the Linear MCP tool. Output only the branch name, nothing else." 2>&1)
+        local exit_code=$?
+        print_info "Command completed with exit code: $exit_code"
+        print_info "Claude output (first 500 chars): ${branch_name:0:500}"
+
+        # Check if Claude command failed
+        if [ $exit_code -ne 0 ]; then
+            print_error "Failed to fetch branch name from Linear (exit code: $exit_code)"
+            print_info "Claude output: $branch_name"
+            exit 1
+        fi
+
+        # Extract the last line (the branch name) and remove backticks if present
+        branch_name=$(echo "$branch_name" | tail -n 1 | sed 's/^`//' | sed 's/`$//')
+        
+        # Validate the branch name format
+        if [[ ! "$branch_name" =~ ^farmisen/.*$ ]]; then
+            print_error "Invalid branch name received from Linear: '$branch_name'"
+            print_info "Expected format: farmisen/<ticket-id>-<description>"
+            exit 1
+        fi
+    else
+        print_error "Cannot fetch branch name from Linear without Claude Code CLI"
+        exit 1
+    fi
+
+    print_info "Using branch name: $branch_name"
+
+    # Create worktree
+    print_info "Creating worktree at $worktree_path..."
+    git worktree add "$worktree_path" -b "$branch_name"
+    
+    # Setup symlinks from configuration or defaults
+    setup_symlinks "$worktree_path" "$git_root"
+    
+    # Navigate to worktree directory
+    cd "$worktree_path"
+    
+    print_success "Worktree created successfully!"
+    print_info "You are now in: $worktree_path"
+    
+    # Setup Python environment FIRST
+    setup_python_environment "$worktree_path"
+
+    # NOW run direnv allow after the venv exists
+    if [ -L "${worktree_path}/.envrc" ] && command -v direnv &> /dev/null; then
+        print_info "Running direnv allow to activate the environment..."
+        direnv allow
+        # Force direnv to reload to pick up the new venv
+        eval "$(direnv export bash)"
+    else
+        # If no direnv, manually activate the venv
+        unset VIRTUAL_ENV
+        if [ -f "${worktree_path}/.venv/bin/activate" ]; then
+            print_info "Activating worktree virtual environment..."
+            source "${worktree_path}/.venv/bin/activate"
+        fi
+    fi
+
+    # Ensure PATH includes user's local bin for claude command
+    export PATH="$HOME/.local/bin:$PATH"
+    
+    # Ensure VIRTUAL_ENV is set correctly for the new process
+    export VIRTUAL_ENV="${worktree_path}/.venv"
+    
+    # Ensure the venv's bin directory is first in PATH
+    export PATH="${VIRTUAL_ENV}/bin:$PATH"
+
+    # Launch Claude if available
+    if check_claude_available; then
+        print_info "Launching Claude Code to implement $ticket_id..."
+        print_info "Using VIRTUAL_ENV: $VIRTUAL_ENV"
+        local claude_cmd
+        claude_cmd=$(get_claude_path)
+        # Launch claude in interactive mode (foreground)
+        exec $claude_cmd "Please implement Linear ticket $ticket_id. Start by fetching the ticket details from Linear."
+    else
+        # Start a new shell in the worktree directory if claude is not available
+        exec "$SHELL"
+    fi
+}
+
+# Run main function
+main "$@"
