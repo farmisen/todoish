@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Script to cleanup a git worktree after PR is merged
-# Usage: ./rmwtr
+# Usage: ./rmwt
 
 # Colors for output
 RED='\033[0;31m'

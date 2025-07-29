@@ -4,10 +4,10 @@ This directory contains utility scripts for managing git worktrees integrated wi
 
 ## Scripts Overview
 
-### mkwtr - Make Worktree
+### mkwt - Make Worktree
 Creates a new git worktree for a Linear ticket with automatic branch naming and environment setup.
 
-### rmwtr - Remove Worktree  
+### rmwt - Remove Worktree  
 Safely removes a git worktree after work is complete, with checks for uncommitted changes and branch merge status.
 
 ### gbn - Get Branch Name
@@ -81,22 +81,22 @@ linear init
 ### 3. Make Scripts Executable
 
 ```bash
-chmod +x mkwtr rmwtr gbn
+chmod +x mkwt rmwt gbn
 ```
 
 ### 4. Configure Symlinks (Optional)
 
-Create a `worktree.rc` file in your repository root to specify which files should be symlinked to worktrees:
+Create a `wt.rc` file in your repository root to specify which files should be symlinked to worktrees:
 
 ```bash
-# Example worktree.rc
+# Example wt.rc
 SYMLINK_FILES="
 .envrc
 .env.local
 "
 ```
 
-If no `worktree.rc` exists, the script will default to symlinking `.envrc` and `.env.local` if they exist.
+If no `wt.rc` exists, the script will skip creating symlinks.
 
 ## Usage
 
@@ -104,7 +104,7 @@ If no `worktree.rc` exists, the script will default to symlinking `.envrc` and `
 
 ```bash
 # From anywhere in the repository
-./bin/mkwtr ROY-123
+./bin/mkwt ROY-123
 
 # This will:
 # 1. Pull latest changes from main
@@ -120,7 +120,7 @@ If no `worktree.rc` exists, the script will default to symlinking `.envrc` and `
 
 ```bash
 # From within the worktree directory
-./bin/rmwtr
+./bin/rmwt
 
 # This will:
 # 1. Check for uncommitted changes
@@ -136,7 +136,7 @@ If no `worktree.rc` exists, the script will default to symlinking `.envrc` and `
 Test what would happen without making changes:
 
 ```bash
-./bin/rmwtr --dry-run
+./bin/rmwt --dry-run
 ```
 
 ### Getting a Branch Name
@@ -180,7 +180,7 @@ git checkout -b $(./bin/gbn ROY-123)
 ### Worktree Issues
 
 **Problem**: "Worktree already exists" error  
-**Solution**: Either navigate to the existing worktree or remove it first with `rmwtr`
+**Solution**: Either navigate to the existing worktree or remove it first with `rmwt`
 
 **Problem**: Cannot remove worktree  
 **Solution**: Use `git worktree remove --force <path>` if the directory was manually deleted

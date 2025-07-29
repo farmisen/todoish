@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Example configuration file for git worktree setup
+# Copy this file to wt.rc and customize for your project
+
+# Files to symlink from main repository to worktrees
+# List each file on a separate line
+SYMLINK_FILES="
+.envrc
+.env
+"

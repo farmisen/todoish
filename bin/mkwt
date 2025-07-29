@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Script to create a git worktree for a Linear ticket
-# Usage: ./mkwtr <ticket-id>
+# Usage: ./mkwt <ticket-id>
 
 # If we're not already running from temp, copy ourselves to temp and re-exec
 # COMMENTED OUT: This causes issues with finding the gbn script
@@ -132,11 +132,11 @@ setup_python_environment() {
 setup_symlinks() {
     local worktree_path="$1"
     local git_root="$2"
-    local config_file="${git_root}/worktree.rc"
+    local config_file="${git_root}/wt.rc"
     
     # Check if configuration file exists
     if [ ! -f "$config_file" ]; then
-        print_info "No worktree.rc file found, skipping symlinks"
+        print_info "No wt.rc file found, skipping symlinks"
         return 0
     fi
     
@@ -145,7 +145,7 @@ setup_symlinks() {
     
     # Check if SYMLINK_FILES is defined and not empty
     if [ -z "$SYMLINK_FILES" ] || [ -z "$(echo "$SYMLINK_FILES" | tr -d '[:space:]')" ]; then
-        print_info "No files to symlink in worktree.rc"
+        print_info "No files to symlink in wt.rc"
         return 0
     fi
     
