@@ -134,6 +134,12 @@ setup_symlinks() {
     local git_root="$2"
     local config_file="${git_root}/worktree.rc"
     
+    # Check if configuration file exists
+    if [ ! -f "$config_file" ]; then
+        print_info "No worktree.rc file found, skipping symlinks"
+        return 0
+    fi
+    
     # Source the configuration file
     source "$config_file"
     
