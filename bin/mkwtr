@@ -134,20 +134,6 @@ setup_symlinks() {
     local git_root="$2"
     local config_file="${git_root}/worktree.rc"
     
-    # Check if configuration file exists
-    if [ ! -f "$config_file" ]; then
-        # Fallback to default symlinks if no config file
-        if [ -f "${git_root}/.envrc" ]; then
-            print_info "Creating symlink for .envrc..."
-            ln -s "${git_root}/.envrc" "${worktree_path}/.envrc"
-        fi
-        if [ -f "${git_root}/CLAUDE.md" ]; then
-            print_info "Creating symlink for CLAUDE.md..."
-            ln -s "${git_root}/CLAUDE.md" "${worktree_path}/CLAUDE.md"
-        fi
-        return 0
-    fi
-    
     # Source the configuration file
     source "$config_file"
     
