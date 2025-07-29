@@ -88,6 +88,7 @@ check_claude_available() {
     return 0
 }
 
+
 check_uv_available() {
     if ! command -v uv &> /dev/null; then
         print_error "uv not found. Please install it first."
@@ -191,10 +192,6 @@ main() {
     print_info "Processing ticket $ticket_id"
 
     # Check dependencies early
-    if ! check_claude_available; then
-        exit 1
-    fi
-
     if ! check_uv_available; then
         exit 1
     fi
@@ -235,39 +232,17 @@ main() {
     print_info "Pulling latest changes from main..."
     git pull origin main
 
-    # Get branch name from Linear
-    print_info "Fetching branch name from Linear for $ticket_id..."
+    # Get branch name using the gbn script
+    print_info "Fetching branch name for $ticket_id..."
     local branch_name
-    local claude_cmd
-    claude_cmd=$(get_claude_path)
-
-    print_info "Using claude command: $claude_cmd"
-
-    if check_claude_available; then
-        print_info "Fetching branch name from Linear..."
-        branch_name=$($claude_cmd --print "Fetch the git branch name for Linear ticket $ticket_id using the Linear MCP tool. Output only the branch name, nothing else." 2>&1)
-        local exit_code=$?
-        print_info "Command completed with exit code: $exit_code"
-        print_info "Claude output (first 500 chars): ${branch_name:0:500}"
-
-        # Check if Claude command failed
-        if [ $exit_code -ne 0 ]; then
-            print_error "Failed to fetch branch name from Linear (exit code: $exit_code)"
-            print_info "Claude output: $branch_name"
-            exit 1
-        fi
-
-        # Extract the last line (the branch name) and remove backticks if present
-        branch_name=$(echo "$branch_name" | tail -n 1 | sed 's/^`//' | sed 's/`$//')
-        
-        # Validate the branch name format
-        if [[ ! "$branch_name" =~ ^farmisen/.*$ ]]; then
-            print_error "Invalid branch name received from Linear: '$branch_name'"
-            print_info "Expected format: farmisen/<ticket-id>-<description>"
-            exit 1
-        fi
-    else
-        print_error "Cannot fetch branch name from Linear without Claude Code CLI"
+    local script_dir
+    script_dir=$(dirname "$0")
+    
+    # Call the gbn script
+    branch_name=$("$script_dir/gbn" "$ticket_id")
+    
+    if [ $? -ne 0 ] || [ -z "$branch_name" ]; then
+        print_error "Failed to get branch name"
         exit 1
     fi
 
