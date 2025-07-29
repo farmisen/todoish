@@ -106,11 +106,14 @@ When creating new Linear tickets:
     git checkout main
     git pull origin main
     
+    # Get the branch name using the gbn script
+    BRANCH_NAME=$(./bin/gbn ROY-42)
+    
     # Create new branch from main
-    git checkout -b farmisen/[ticket-id]-[description]
+    git checkout -b "$BRANCH_NAME"
     
     # Example for ticket ROY-42:
-    git checkout -b farmisen/roy-42-implement-core-web-explorer-class
+    # This will create: farmisen/roy-42-implement-core-web-explorer-class
     ```
 -   **Already on Expected Branch**: If you're already on the correct branch for the ticket:
     ```bash
@@ -125,7 +128,7 @@ When creating new Linear tickets:
     # git rebase --continue
     ```
 -   **Pull Latest Changes**: ALWAYS pull the latest changes from `main` before creating a new branch (`git pull origin main`).
--   **Branch Naming**: Fetch the suggested branch name from the Linear ticket when available. If not available, construct branch names using the pattern: `farmisen/<ticket-id-slugified>-<ticket-title-slugified>` (all lowercase).
+-   **Branch Naming**: Use the `./bin/gbn <ticket-id>` script to generate branch names from Linear tickets. The script will automatically fetch the ticket title and create a properly formatted branch name following the pattern: `farmisen/<ticket-id-slugified>-<ticket-title-slugified>` (all lowercase).
 -   **Base Branch**: Always create new branches from `main`.
 
 ### Pull Request Standards
